@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyTrack</title>
+  <meta name="description" content="A production-quality study tracker with stopwatch, graphs, alarms and history." />
+  <meta name="theme-color" content="#180830" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="theme-light">
+
+  <!-- ═══════════════════════════════════════════════════
+       ANIMATED STUDY BACKGROUND
+       Fixed behind all content (z-index -1, no pointer events).
+       SVGs use currentColor → set color: on each .bg-obj.
+       Floats via CSS keyframes; parallax via JS (app.js end).
+  ════════════════════════════════════════════════════════ -->
+  <div id="study-bg" aria-hidden="true" role="presentation">
+
+    <!-- ── 1. Open Book  (layer-1 · deep · blurry · slow) ── -->
+    <div class="bg-obj layer-1 bg-mobile-hide" data-layer="1"
+         style="left:3%;top:7%;width:88px;--float-dur:14s;--float-del:0s;opacity:0.25;filter:blur(1.5px);color:#1E6FFF">
+      <div class="bg-obj-inner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M24 8v32"/>
+          <path d="M4 10c10-3 20-3 20 0v30C14 37 4 37 4 40V10z"/>
+          <path d="M44 10c-10-3-20-3-20 0v30c10-3 20-3 20 0V10z"/>
+          <path d="M9 16h10M9 21h9M9 26h7"/>
+          <path d="M29 16h10M29 21h9M29 26h7"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 2. Closed Book  (layer-2 · mid) ───────────────── -->
+    <div class="bg-obj layer-2" data-layer="2"
+         style="left:83%;top:14%;width:66px;--float-dur:11s;--float-del:-3s;opacity:0.28;color:#FF2442">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="8" y="5" width="30" height="38" rx="3"/>
+          <path d="M8 11h30"/>
+          <path d="M14 5v38"/>
+          <path d="M19 22h14M19 28h10"/>
+          <path d="M8 5a4 4 0 010 8"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 3. Laptop  (layer-1 · deep · blurry) ───────────── -->
+    <div class="bg-obj layer-1 bg-mobile-hide" data-layer="1"
+         style="left:69%;top:63%;width:102px;--float-dur:13s;--float-del:-5s;opacity:0.22;filter:blur(2px);color:#38BDF8">
+      <div class="bg-obj-inner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="6" y="8" width="36" height="24" rx="2"/>
+          <path d="M2 32h44M12 32l-2 6h28l-2-6"/>
+          <path d="M12 14h24M12 19h16M12 24h20"/>
+          <circle cx="24" cy="29.5" r="1.5" fill="currentColor"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 4. Pen  (layer-3 · near · fast) ───────────────── -->
+    <div class="bg-obj layer-3" data-layer="3"
+         style="left:88%;top:38%;width:44px;--float-dur:8s;--float-del:-2s;opacity:0.32;color:#A040FF">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M34 4l10 10-24 28-6 2 2-6L34 4z"/>
+          <path d="M30 10l8 8"/>
+          <path d="M22 32l6-6"/>
+          <path d="M10 44l2-6"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 5. Pencil  (layer-2) ──────────────────────────── -->
+    <div class="bg-obj layer-2" data-layer="2"
+         style="left:5%;top:44%;width:52px;--float-dur:10s;--float-del:-7s;opacity:0.28;color:#FF2442">
+      <div class="bg-obj-inner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 40l4-14L38 4l6 6-22 22-14 4z"/>
+          <path d="M16 36l-4-4"/>
+          <path d="M17 26l10-10"/>
+          <path d="M38 4l6 6"/>
+          <path d="M12 40l-2 6 6-2"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 6. Notebook  (layer-1 · deep · blurry) ─────────── -->
+    <div class="bg-obj layer-1 bg-mobile-hide" data-layer="1"
+         style="left:11%;top:67%;width:80px;--float-dur:12s;--float-del:-4s;opacity:0.24;filter:blur(1px);color:#1E6FFF">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="10" y="4" width="28" height="40" rx="2"/>
+          <path d="M10 12h28M10 20h28M10 28h28M10 36h18"/>
+          <path d="M10 4v40"/>
+          <circle cx="10" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+          <circle cx="10" cy="20" r="2.5" fill="currentColor" stroke="none"/>
+          <circle cx="10" cy="28" r="2.5" fill="currentColor" stroke="none"/>
+          <circle cx="10" cy="36" r="2.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 7. Sticky Note  (layer-3 · near) ──────────────── -->
+    <div class="bg-obj layer-3" data-layer="3"
+         style="left:55%;top:5%;width:60px;--float-dur:9s;--float-del:-1s;opacity:0.30;color:#FF1A80">
+      <div class="bg-obj-inner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 6h36v28l-12 14H6V6z" fill="currentColor" fill-opacity="0.08"/>
+          <path d="M6 6h36v28l-12 14H6V6z"/>
+          <path d="M30 34v14l12-14H30z" fill="currentColor" fill-opacity="0.14"/>
+          <path d="M30 34v14l12-14H30z"/>
+          <path d="M14 18h20M14 24h20M14 30h10"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 8. Graduation Cap  (layer-2) ──────────────────── -->
+    <div class="bg-obj layer-2" data-layer="2"
+         style="left:40%;top:2%;width:74px;--float-dur:11s;--float-del:-6s;opacity:0.26;color:#9333EA">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M24 6L46 18 24 30 2 18 24 6z" fill="currentColor" fill-opacity="0.10"/>
+          <path d="M24 6L46 18 24 30 2 18 24 6z"/>
+          <path d="M8 24v12s7 8 16 8 16-8 16-8V24"/>
+          <path d="M46 18v12"/>
+          <circle cx="46" cy="31" r="2.5" fill="currentColor" stroke="none"/>
+          <path d="M42 31l-2 4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 9. Coffee Mug  (layer-3 · near) ───────────────── -->
+    <div class="bg-obj layer-3" data-layer="3"
+         style="left:85%;top:74%;width:54px;--float-dur:7s;--float-del:-3.5s;opacity:0.32;color:#FF2442">
+      <div class="bg-obj-inner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 16h24v20a4 4 0 01-4 4H12a4 4 0 01-4-4V16z"/>
+          <path d="M32 20h4a5 5 0 010 10h-4"/>
+          <path d="M6 16h28"/>
+          <path d="M14 8c0-2 3-2 3-4M20 8c0-2 3-2 3-4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 10. Lightbulb  (layer-2) ──────────────────────── -->
+    <div class="bg-obj layer-2" data-layer="2"
+         style="left:22%;top:14%;width:60px;--float-dur:10s;--float-del:-8s;opacity:0.28;color:#38BDF8">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M24 4a14 14 0 018 25l-2 3v5a2 2 0 01-2 2H20a2 2 0 01-2-2v-5l-2-3A14 14 0 0124 4z"
+                fill="currentColor" fill-opacity="0.08"/>
+          <path d="M24 4a14 14 0 018 25l-2 3v5a2 2 0 01-2 2H20a2 2 0 01-2-2v-5l-2-3A14 14 0 0124 4z"/>
+          <path d="M18 38h12M19 42h10"/>
+          <path d="M24 10v5M4 24H0M44 24h4M11 9l3 3M37 9l-3 3"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 11. Ruler  (layer-3 · near) ───────────────────── -->
+    <div class="bg-obj layer-3" data-layer="3"
+         style="left:60%;top:83%;width:54px;--float-dur:8.5s;--float-del:-5s;opacity:0.30;color:#1E6FFF">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="17" width="40" height="14" rx="2"/>
+          <path d="M10 17v5M16 17v8M22 17v5M28 17v8M34 17v5M40 17v8"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 12. Sparkle / 4-pt star  (layer-3 · near · fast) ─ -->
+    <div class="bg-obj layer-3" data-layer="3"
+         style="left:32%;top:88%;width:34px;--float-dur:6s;--float-del:-2s;opacity:0.35;color:#A040FF">
+      <div class="bg-obj-inner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="currentColor">
+          <!-- Classic 4-point sparkle: mix of red+blue = violet -->
+          <path d="M24 2C24 14 34 24 46 24 34 24 24 34 24 46 24 34 14 24 2 24 14 24 24 14 24 2Z" fill-opacity="0.75"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 13. Second sparkle  (layer-2 · mid) ───────────── -->
+    <div class="bg-obj layer-2 bg-mobile-hide" data-layer="2"
+         style="left:76%;top:30%;width:22px;--float-dur:9s;--float-del:-4s;opacity:0.32;color:#FF2442">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="currentColor">
+          <path d="M24 2C24 14 34 24 46 24 34 24 24 34 24 46 24 34 14 24 2 24 14 24 24 14 24 2Z" fill-opacity="0.75"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 14. Stack of books  (layer-2 · mid) ───────────── -->
+    <div class="bg-obj layer-2 bg-mobile-hide" data-layer="2"
+         style="left:48%;top:72%;width:72px;--float-dur:12s;--float-del:-9s;opacity:0.25;color:#9333EA">
+      <div class="bg-obj-inner">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <!-- 3 stacked books -->
+          <rect x="6"  y="32" width="36" height="10" rx="2"/>
+          <rect x="8"  y="22" width="32" height="10" rx="2"/>
+          <rect x="10" y="12" width="28" height="10" rx="2"/>
+          <path d="M12 12v10M14 22v10M16 32v10"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── 15. Clock  (layer-3 · near) ───────────────────── -->
+    <div class="bg-obj layer-3" data-layer="3"
+         style="left:16%;top:4%;width:48px;--float-dur:7.5s;--float-del:-0.5s;opacity:0.30;color:#FF2442">
+      <div class="bg-obj-inner anim-rev">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="24" cy="24" r="20"/>
+          <path d="M24 10v14l8 5"/>
+          <path d="M24 6V4M24 44v-2M44 24h-2M6 24H4"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- JS will inject .bg-particle dots here -->
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       HEADER  –  date, live clock, today's total
+  ════════════════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="header-left">
+      <h1 class="brand">StudyTrack</h1>
+      <div class="live-datetime">
+        <span id="hdr-date" class="hdr-date"></span>
+        <span id="hdr-clock" class="hdr-clock"></span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="today-total-box">
+        <span class="today-label">Today's total</span>
+        <span id="today-total" class="today-total-value">0h 00m</span>
+      </div>
+      <button id="theme-toggle" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <main class="app-main">
+
+    <!-- ═══════════════════════════════════════════
+         STOPWATCH CARD
+    ════════════════════════════════════════════════ -->
+    <section class="card stopwatch-card" aria-label="Stopwatch">
+      <h2 class="card-title">Stopwatch</h2>
+
+      <div id="sw-display" class="sw-display" aria-live="polite" aria-atomic="true">00:00:00</div>
+
+      <input
+        type="text"
+        id="sw-subject"
+        class="subject-input"
+        placeholder="What are you studying? (optional)"
+        maxlength="80"
+        aria-label="Subject"
+      />
+
+      <div class="sw-buttons">
+        <button id="btn-start"  class="btn btn-primary"  >▶ Start</button>
+        <button id="btn-pause"  class="btn btn-secondary" hidden>⏸ Pause</button>
+        <button id="btn-resume" class="btn btn-secondary" hidden>▶ Resume</button>
+        <button id="btn-save"   class="btn btn-success"   hidden>⏹ Stop &amp; Save</button>
+        <button id="btn-reset"  class="btn btn-danger"    hidden>↺ Reset</button>
+      </div>
+
+      <p class="wake-lock-note" id="wake-note" hidden>
+        📺 Screen wake lock active — display will stay on while studying.
+      </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         ALARMS CARD
+    ════════════════════════════════════════════════ -->
+    <section class="card alarms-card" aria-label="Alarms">
+      <h2 class="card-title">Study Alarms</h2>
+      <p class="alarm-info-note">
+        ℹ️ The browser tab must remain open for alarms to sound.
+        Close &amp; reopen the tab? Alarms re-arm automatically on load.
+      </p>
+
+      <div class="alarm-form">
+        <div class="alarm-form-row">
+          <label class="form-label">Target duration</label>
+          <div class="alarm-duration-inputs">
+            <input type="number" id="alarm-h"   class="num-input" min="0" max="23" value="1"  aria-label="Hours"  /> h
+            <input type="number" id="alarm-m"   class="num-input" min="0" max="59" value="30" aria-label="Minutes"/> m
+          </div>
+        </div>
+        <div class="alarm-form-row">
+          <label class="form-label">Mode</label>
+          <select id="alarm-mode" class="select-input" aria-label="Alarm mode">
+            <option value="session">Per session (from stopwatch start)</option>
+            <option value="daily">Daily total (cumulative today)</option>
+          </select>
+        </div>
+        <button id="btn-add-alarm" class="btn btn-primary">+ Add Alarm</button>
+      </div>
+
+      <ul id="alarm-list" class="alarm-list" aria-label="Alarm list"></ul>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         GOALS CARD
+    ════════════════════════════════════════════════ -->
+    <section class="card goal-card" aria-label="Daily goal">
+      <h2 class="card-title">Daily Goal</h2>
+      <div class="goal-row">
+        <label for="goal-hours" class="form-label">Target hours per day</label>
+        <input type="number" id="goal-hours" class="num-input wide" min="0" max="24" step="0.5" placeholder="e.g. 4" aria-label="Daily goal hours" />
+        <button id="btn-save-goal" class="btn btn-primary">Save</button>
+      </div>
+      <div class="goal-progress-row" id="goal-progress-row" hidden>
+        <div class="progress-ring-wrap">
+          <svg id="goal-ring-svg" viewBox="0 0 80 80" class="progress-ring" aria-hidden="true">
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stop-color="#FF1A80"/>
+                <stop offset="100%" stop-color="#A040FF"/>
+              </linearGradient>
+            </defs>
+            <circle cx="40" cy="40" r="34" class="ring-bg" />
+            <circle cx="40" cy="40" r="34" class="ring-fill" id="ring-fill" />
+          </svg>
+          <span id="ring-pct" class="ring-pct">0%</span>
+        </div>
+        <div class="goal-stats">
+          <div><span class="stat-label">Today</span><span id="goal-today-val" class="stat-val">0h 0m</span></div>
+          <div><span class="stat-label">Goal</span><span id="goal-target-val" class="stat-val">-</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════
+         TABS:  GRAPHS  |  HISTORY  |  IMPORT/EXPORT
+    ════════════════════════════════════════════════ -->
+    <div class="tab-bar" role="tablist" aria-label="Sections">
+      <button class="tab-btn active" data-tab="graphs"  role="tab" aria-selected="true"  aria-controls="tab-graphs" >📊 Graphs</button>
+      <button class="tab-btn"        data-tab="history" role="tab" aria-selected="false" aria-controls="tab-history">📋 History</button>
+      <button class="tab-btn"        data-tab="data"    role="tab" aria-selected="false" aria-controls="tab-data"   >💾 Data</button>
+    </div>
+
+    <!-- ─── GRAPHS TAB ──────────────────────────── -->
+    <section id="tab-graphs" class="tab-pane active card" aria-label="Graphs">
+      <div class="graph-controls">
+        <div class="range-btns" role="group" aria-label="Time range">
+          <button class="range-btn active" data-range="daily">Daily</button>
+          <button class="range-btn" data-range="weekly">Weekly</button>
+          <button class="range-btn" data-range="monthly">Monthly</button>
+          <button class="range-btn" data-range="yearly">Yearly</button>
+        </div>
+        <div id="month-picker-wrap" class="month-picker-wrap" hidden>
+          <label for="month-picker" class="form-label">Month</label>
+          <input type="month" id="month-picker" class="select-input" aria-label="Pick a month" />
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <span class="sc-label">Total</span>
+          <span class="sc-val" id="sc-total">—</span>
+        </div>
+        <div class="summary-card">
+          <span class="sc-label">Daily avg</span>
+          <span class="sc-val" id="sc-avg">—</span>
+        </div>
+        <div class="summary-card">
+          <span class="sc-label">Best day</span>
+          <span class="sc-val" id="sc-best">—</span>
+        </div>
+        <div class="summary-card">
+          <span class="sc-label">Streak</span>
+          <span class="sc-val" id="sc-streak">—</span>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="study-chart" aria-label="Study hours chart" role="img"></canvas>
+        <p id="chart-empty" class="chart-empty" hidden>No study data yet. Start the stopwatch to begin!</p>
+      </div>
+    </section>
+
+    <!-- ─── HISTORY TAB ─────────────────────────── -->
+    <section id="tab-history" class="tab-pane card" hidden aria-label="History">
+      <div class="history-toolbar">
+        <h2 class="card-title">Session History</h2>
+        <button id="btn-add-manual" class="btn btn-secondary">+ Add Manual Session</button>
+      </div>
+
+      <!-- Manual add form (collapsed by default) -->
+      <div id="manual-form" class="manual-form" hidden>
+        <h3 class="form-section-title">Add Session Manually</h3>
+        <div class="manual-row">
+          <label class="form-label">Date</label>
+          <input type="date" id="man-date" class="select-input" aria-label="Session date" />
+        </div>
+        <div class="manual-row">
+          <label class="form-label">Start time</label>
+          <input type="time" id="man-start" class="select-input" aria-label="Start time" />
+        </div>
+        <div class="manual-row">
+          <label class="form-label">Duration (h&nbsp;m)</label>
+          <div class="alarm-duration-inputs">
+            <input type="number" id="man-dur-h" class="num-input" min="0" max="23" value="0" aria-label="Hours" /> h
+            <input type="number" id="man-dur-m" class="num-input" min="0" max="59" value="30" aria-label="Minutes" /> m
+          </div>
+        </div>
+        <div class="manual-row">
+          <label class="form-label">Subject</label>
+          <input type="text" id="man-subject" class="subject-input" placeholder="Subject (optional)" maxlength="80" aria-label="Subject" />
+        </div>
+        <div class="manual-form-actions">
+          <button id="btn-manual-save" class="btn btn-success">Save Session</button>
+          <button id="btn-manual-cancel" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+
+      <div id="history-list" class="history-list"></div>
+    </section>
+
+    <!-- ─── DATA TAB ────────────────────────────── -->
+    <section id="tab-data" class="tab-pane card" hidden aria-label="Data management">
+      <h2 class="card-title">Backup &amp; Restore</h2>
+      <div class="data-actions">
+        <button id="btn-export" class="btn btn-primary">⬇ Export JSON</button>
+        <label class="btn btn-secondary file-label" for="import-file">⬆ Import JSON</label>
+        <input type="file" id="import-file" accept=".json" class="file-input" aria-label="Import JSON file" />
+      </div>
+      <div class="data-actions" style="margin-top:0.5rem">
+        <button id="btn-clear-data" class="btn btn-danger">🗑 Clear All Data</button>
+      </div>
+      <p class="data-note">Importing will <strong>merge</strong> imported sessions with existing data. Duplicates (same ID) are skipped.</p>
+    </section>
+
+  </main><!-- /app-main -->
+
+  <!-- ═══════════════════════════════════════════
+       ALARM OVERLAY
+  ════════════════════════════════════════════════ -->
+  <div id="alarm-overlay" class="alarm-overlay" hidden role="alertdialog" aria-modal="true" aria-labelledby="overlay-title">
+    <div class="alarm-overlay-box">
+      <div class="alarm-icon">⏰</div>
+      <h2 id="overlay-title" class="overlay-title">Time Reached!</h2>
+      <p id="overlay-msg" class="overlay-msg"></p>
+      <div class="overlay-btns">
+        <button id="btn-stop-alarm"  class="btn btn-danger">Stop Alarm</button>
+        <button id="btn-snooze-alarm" class="btn btn-secondary">Snooze 5 min</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
