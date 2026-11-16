@@ -1,26 +1,32 @@
 {
   "name": "StudyTrack",
   "short_name": "StudyTrack",
-  "description": "A production-quality offline study tracker with stopwatch, alarms and progress graphs.",
-  "start_url": "./index.html",
+  "description": "A production-quality offline study tracker with stopwatch, alarms, daily sentence and progress graphs.",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#F4F4F8",
-  "theme_color": "#6C63FF",
+  "background_color": "#0c0818",
+  "theme_color": "#180830",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["education", "productivity"],
-  "screenshots": []
+  "categories": ["education", "productivity"]
 }

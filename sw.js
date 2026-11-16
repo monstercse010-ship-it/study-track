@@ -3,18 +3,21 @@
  * Cache-first strategy for all app assets so it works fully offline.
  */
 
-const CACHE_NAME = 'studytrack-v3';
+const CACHE_NAME = 'studytrack-v4';
 
 // Assets to pre-cache on install
 const PRECACHE = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './fallback-sentences.js',
-  './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  '/',
+  '/index.html',
+  '/style.css',
+  '/app.js',
+  '/fallback-sentences.js',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/favicon.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png'
 ];
 
 // ── Install: pre-cache app shell ──────────────────────────
