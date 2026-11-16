@@ -24,6 +24,27 @@ No framework. No backend. Everything stored in `localStorage`.
 | **Light / Dark theme** | Remembered in `localStorage` |
 | **Cross-tab sync** | `storage` event keeps multiple open tabs in sync |
 | **Responsive** | Mobile-first CSS, works on phone and desktop |
+| **Daily Sentence** | AI-generated (Gemini 2.5 Flash) English sentence with Bangla translation, usage notes, Web Speech audio pronunciation, daily read tracking & reviewable history |
+
+---
+
+## Daily Sentence & Vercel AI Setup
+
+StudyTrack features a daily English sentence designed for real-world fluency (class 8 accessible, smart & polished, < 20 words).
+
+### AI Generation (Secure Serverless Function)
+- Route: `/api/daily-sentence.js`
+- Model: `gemini-2.5-flash`
+- Safe fallback: Includes `fallback-sentences.js` with **65 curated sentences** so the app functions 100% reliably even offline or without an API key.
+
+### Adding your Gemini API Key in Vercel
+1. Go to your project on [Vercel](https://vercel.com).
+2. Navigate to **Settings** > **Environment Variables**.
+3. Add a new variable:
+   - **Key**: `GEMINI_API_KEY`
+   - **Value**: Your Google AI Studio Gemini API Key
+4. Click **Save**.
+5. **Redeploy** your latest deployment (or run a new commit/push) for the environment variable to take effect.
 
 ---
 
@@ -60,15 +81,18 @@ Once served over `localhost`, the browser will offer an **Install** prompt (or f
 
 ```
 studytrack/
-├── index.html          Main shell & markup
-├── style.css           All styles (mobile-first, light/dark)
-├── app.js              All logic (stopwatch, alarms, charts, history, PWA)
-├── manifest.json       PWA web-app manifest
-├── sw.js               Service worker (cache-first, offline support)
+├── api/
+│   └── daily-sentence.js   Vercel serverless function (Gemini 2.5 Flash)
+├── fallback-sentences.js   Built-in 65-sentence offline database
+├── index.html              Main shell & markup
+├── style.css               All styles (mobile-first, light/dark, red/blue mixed)
+├── app.js                  All logic (stopwatch, alarms, charts, history, daily sentence, PWA)
+├── manifest.json           PWA web-app manifest
+├── sw.js                   Service worker (cache-first, offline support)
 ├── icons/
-│   ├── icon-192.png    PWA icon
-│   └── icon-512.png    PWA splash icon
-└── generate-icons.js   (dev utility) Regenerate icons with Node.js
+│   ├── icon-192.png        PWA icon
+│   └── icon-512.png        PWA splash icon
+└── generate-icons.js       (dev utility) Regenerate icons with Node.js
 ```
 
 ---

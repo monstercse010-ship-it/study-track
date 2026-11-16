@@ -1296,6 +1296,410 @@ renderAll();
 resumeOnLoad();
 
 /* ═══════════════════════════════════════════════════════
+   17. DAILY SENTENCE FEATURE
+   • AI-powered via /api/daily-sentence (Gemini 2.5 Flash on Vercel)
+   • 65-sentence built-in fallback database (fallback-sentences.js)
+   • Strictly deduplicated, local date attribution, audio pronunciation
+   • Daily read-state persistence & reviewable past history
+════════════════════════════════════════════════════════ */
+
+const SENTENCE_KEY = 'studytrack_sentence';
+
+// DOM elements for Daily Sentence
+const sentenceCard          = $('sentence-card');
+const sentenceDateLabel     = $('sentence-date-label');
+const sentenceEn            = $('sentence-en');
+const sentenceBn            = $('sentence-bn');
+const sentenceUsage         = $('sentence-usage');
+const btnSpeakSentence      = $('btn-speak-sentence');
+const btnMarkRead           = $('btn-mark-read');
+const btnPastSentences      = $('btn-past-sentences');
+const btnBannerPastSentences= $('btn-banner-past-sentences');
+const sentenceReadBanner    = $('sentence-read-banner');
+const pastSentencesModal    = $('past-sentences-modal');
+const pastSentencesList     = $('past-sentences-list');
+const btnClosePastModal     = $('btn-close-past-modal');
+
+/** Load sentence store from localStorage */
+function loadSentenceStore() {
+  const defaults = {
+    todayDate: '',
+    todaySentence: null,
+    isRead: false,
+    history: []
+  };
+  try {
+    const raw = localStorage.getItem(SENTENCE_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    return {
+      todayDate:     typeof parsed.todayDate === 'string' ? parsed.todayDate : '',
+      todaySentence: (parsed.todaySentence && typeof parsed.todaySentence === 'object') ? parsed.todaySentence : null,
+      isRead:        Boolean(parsed.isRead),
+      history:       Array.isArray(parsed.history) ? parsed.history : []
+    };
+  } catch (_) {
+    return defaults;
+  }
+}
+
+/** Save sentence store to localStorage */
+function saveSentenceStore(data) {
+  try {
+    localStorage.setItem(SENTENCE_KEY, JSON.stringify(data));
+  } catch (_) {}
+}
+
+/** Extract normalized list of all previously seen sentences to avoid repeats */
+function getUsedSentences(store) {
+  const set = new Set();
+  if (Array.isArray(store.history)) {
+    store.history.forEach(item => {
+      if (item && item.sentence) set.add(item.sentence.trim().toLowerCase());
+    });
+  }
+  if (store.todaySentence && store.todaySentence.sentence) {
+    set.add(store.todaySentence.sentence.trim().toLowerCase());
+  }
+  return set;
+}
+
+/** Pick a guaranteed unused sentence from built-in fallback database */
+function pickFallbackSentence(usedSet) {
+  const list = (typeof window !== 'undefined' && Array.isArray(window.FALLBACK_SENTENCES))
+    ? window.FALLBACK_SENTENCES
+    : [
+        {
+          sentence: "I'd really appreciate it if you could give me a hand.",
+          bangla: "আপনি যদি আমাকে একটু সাহায্য করতেন, আমি সত্যিই কৃতজ্ঞ হতাম।",
+          usage: "Use when politely asking someone for help with schoolwork or chores."
+        }
+      ];
+
+  // Find the first sentence not yet in the used set
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i];
+    if (!usedSet.has(s.sentence.trim().toLowerCase())) {
+      return {
+        sentence: s.sentence,
+        bangla:   s.bangla,
+        usage:    s.usage,
+        source:   'fallback-database'
+      };
+    }
+  }
+
+  // If all sentences in the database have been used, pick the least recently seen one
+  const randomIndex = Math.floor(Math.random() * list.length);
+  const fallback = list[randomIndex];
+  return {
+    sentence: fallback.sentence,
+    bangla:   fallback.bangla,
+    usage:    fallback.usage,
+    source:   'fallback-database-recycled'
+  };
+}
+
+/** Fetch sentence from Vercel Serverless Function (/api/daily-sentence) */
+async function fetchFromGeminiAPI(previousSentencesList) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s client timeout
+
+  try {
+    const res = await fetch('/api/daily-sentence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ previousSentences: previousSentencesList }),
+      signal: controller.signal
+    });
+
+    if (!res.ok) {
+      throw new Error(`API returned HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (!data || !data.sentence || !data.bangla || !data.usage) {
+      throw new Error('Incomplete sentence payload received from API');
+    }
+
+    return {
+      sentence: String(data.sentence).trim(),
+      bangla:   String(data.bangla).trim(),
+      usage:    String(data.usage).trim(),
+      source:   data.source || 'gemini-2.5-flash'
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/** Speak English sentence aloud using Web Speech API */
+function speakEnglishSentence(text, triggerBtn) {
+  if (!('speechSynthesis' in window)) {
+    return;
+  }
+
+  try {
+    window.speechSynthesis.cancel(); // Stop any pending speech
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.88; // Natural, clear educational pace
+
+    if (triggerBtn) {
+      utterance.onstart = () => triggerBtn.classList.add('speaking');
+      utterance.onend   = () => triggerBtn.classList.remove('speaking');
+      utterance.onerror = () => triggerBtn.classList.remove('speaking');
+    }
+
+    window.speechSynthesis.speak(utterance);
+  } catch (_) {
+    if (triggerBtn) triggerBtn.classList.remove('speaking');
+  }
+}
+
+/** Format a friendly date string (e.g. "Monday, 16 November") */
+function formatSentenceDate(d) {
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+/** Render the Daily Sentence UI card */
+function renderDailySentenceCard(sentenceObj, isTodayRead, dateStr) {
+  if (!sentenceCard) return;
+
+  if (isTodayRead) {
+    sentenceCard.hidden = true;
+    if (sentenceReadBanner) sentenceReadBanner.hidden = false;
+    return;
+  }
+
+  if (sentenceReadBanner) sentenceReadBanner.hidden = true;
+  sentenceCard.hidden = false;
+
+  if (sentenceDateLabel) {
+    const today = new Date();
+    sentenceDateLabel.textContent = `· ${formatSentenceDate(today)}`;
+  }
+
+  if (sentenceEn)    sentenceEn.textContent    = sentenceObj.sentence;
+  if (sentenceBn)    sentenceBn.textContent    = sentenceObj.bangla;
+  if (sentenceUsage) sentenceUsage.innerHTML   = `<strong>💡 When to use:</strong> ${sentenceObj.usage}`;
+}
+
+/** Populate and open the Past Sentences review modal */
+function openPastSentencesModal() {
+  if (!pastSentencesModal || !pastSentencesList) return;
+
+  const store = loadSentenceStore();
+  const history = store.history || [];
+
+  pastSentencesList.innerHTML = '';
+
+  if (history.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'past-empty';
+    empty.innerHTML = '✨ No past sentences yet.<br>Click <strong>"✓ Read"</strong> on today\'s sentence to start building your collection!';
+    pastSentencesList.appendChild(empty);
+  } else {
+    // Show newest first
+    const sorted = [...history].reverse();
+
+    sorted.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'past-sentence-item';
+
+      const topRow = document.createElement('div');
+      topRow.className = 'past-item-top';
+
+      const dateSpan = document.createElement('span');
+      dateSpan.className = 'past-item-date';
+      dateSpan.textContent = item.date || '';
+
+      const speakBtn = document.createElement('button');
+      speakBtn.className = 'icon-btn-speak';
+      speakBtn.style.width = '30px';
+      speakBtn.style.height = '30px';
+      speakBtn.style.fontSize = '0.85rem';
+      speakBtn.title = 'Listen pronunciation';
+      speakBtn.innerHTML = '🔊';
+      speakBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        speakEnglishSentence(item.sentence, speakBtn);
+      });
+
+      topRow.appendChild(dateSpan);
+      topRow.appendChild(speakBtn);
+
+      const enP = document.createElement('div');
+      enP.className = 'past-item-en';
+      enP.textContent = `“${item.sentence}”`;
+
+      const bnP = document.createElement('div');
+      bnP.className = 'past-item-bn';
+      bnP.textContent = item.bangla;
+
+      const usageP = document.createElement('div');
+      usageP.className = 'past-item-usage';
+      usageP.textContent = `💡 ${item.usage}`;
+
+      el.appendChild(topRow);
+      el.appendChild(enP);
+      el.appendChild(bnP);
+      el.appendChild(usageP);
+
+      pastSentencesList.appendChild(el);
+    });
+  }
+
+  pastSentencesModal.hidden = false;
+}
+
+/** Close the Past Sentences review modal */
+function closePastSentencesModal() {
+  if (pastSentencesModal) pastSentencesModal.hidden = true;
+}
+
+/** Initialize Daily Sentence feature */
+async function initDailySentenceFeature() {
+  const todayKey = dateKey(new Date());
+  let store = loadSentenceStore();
+
+  // Check if today already has an active sentence
+  if (store.todayDate === todayKey && store.todaySentence) {
+    // Already set for today — render current sentence or read-banner
+    renderDailySentenceCard(store.todaySentence, store.isRead, store.todayDate);
+    return;
+  }
+
+  // New day or first visit:
+  // If yesterday had a sentence that wasn't archived into history, archive it now
+  if (store.todaySentence && store.todayDate && store.todayDate !== todayKey) {
+    const alreadyInHistory = store.history.some(h => h.date === store.todayDate || h.sentence === store.todaySentence.sentence);
+    if (!alreadyInHistory) {
+      store.history.push({
+        date:     store.todayDate,
+        sentence: store.todaySentence.sentence,
+        bangla:   store.todaySentence.bangla,
+        usage:    store.todaySentence.usage
+      });
+    }
+  }
+
+  // Reset for today
+  store.todayDate     = todayKey;
+  store.isRead        = false;
+  store.todaySentence = null;
+  saveSentenceStore(store);
+
+  const usedSet = getUsedSentences(store);
+  const previousList = Array.from(usedSet);
+
+  let sentenceObj = null;
+
+  // Attempt to fetch fresh sentence from Gemini serverless function
+  try {
+    sentenceObj = await fetchFromGeminiAPI(previousList);
+  } catch (err) {
+    // Seamless fallback: pick next unused sentence from offline database
+    sentenceObj = pickFallbackSentence(usedSet);
+  }
+
+  // Store and render
+  store.todaySentence = sentenceObj;
+  saveSentenceStore(store);
+  renderDailySentenceCard(sentenceObj, false, todayKey);
+}
+
+// ── Event Handlers for Daily Sentence ───────────────────
+
+// Read aloud button
+if (btnSpeakSentence) {
+  btnSpeakSentence.addEventListener('click', () => {
+    const store = loadSentenceStore();
+    if (store.todaySentence && store.todaySentence.sentence) {
+      speakEnglishSentence(store.todaySentence.sentence, btnSpeakSentence);
+    }
+  });
+}
+
+// Mark as Read button
+if (btnMarkRead) {
+  btnMarkRead.addEventListener('click', () => {
+    const store = loadSentenceStore();
+    if (!store.todaySentence) return;
+
+    store.isRead = true;
+
+    // Archive into history if not already present
+    const alreadyArchived = store.history.some(
+      h => h.date === store.todayDate && h.sentence === store.todaySentence.sentence
+    );
+    if (!alreadyArchived) {
+      store.history.push({
+        date:     store.todayDate,
+        sentence: store.todaySentence.sentence,
+        bangla:   store.todaySentence.bangla,
+        usage:    store.todaySentence.usage
+      });
+    }
+
+    saveSentenceStore(store);
+
+    // Smooth dismissal animation
+    if (sentenceCard) {
+      sentenceCard.classList.add('fade-out');
+      setTimeout(() => {
+        sentenceCard.hidden = true;
+        sentenceCard.classList.remove('fade-out');
+        if (sentenceReadBanner) sentenceReadBanner.hidden = false;
+      }, 320);
+    }
+  });
+}
+
+// Past sentences modal buttons
+if (btnPastSentences) {
+  btnPastSentences.addEventListener('click', openPastSentencesModal);
+}
+if (btnBannerPastSentences) {
+  btnBannerPastSentences.addEventListener('click', openPastSentencesModal);
+}
+if (btnClosePastModal) {
+  btnClosePastModal.addEventListener('click', closePastSentencesModal);
+}
+
+// Close modal when clicking outside modal box
+if (pastSentencesModal) {
+  pastSentencesModal.addEventListener('click', (e) => {
+    if (e.target === pastSentencesModal) closePastSentencesModal();
+  });
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pastSentencesModal && !pastSentencesModal.hidden) {
+    closePastSentencesModal();
+  }
+});
+
+// Run initial sentence check on load
+initDailySentenceFeature();
+
+// Also check on tab visibility change or midnight split if date changed
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    const todayKey = dateKey(new Date());
+    const store = loadSentenceStore();
+    if (store.todayDate !== todayKey) {
+      initDailySentenceFeature();
+    }
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
    ANIMATED STUDY BACKGROUND
    Parallax (mouse on desktop, scroll on mobile) + particles.
 

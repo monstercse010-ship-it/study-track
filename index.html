@@ -257,6 +257,54 @@
   <main class="app-main">
 
     <!-- ═══════════════════════════════════════════
+         DAILY SENTENCE CARD (Above Stopwatch)
+    ════════════════════════════════════════════════ -->
+    <section id="sentence-card" class="card sentence-card" aria-label="Daily Sentence" hidden>
+      <div class="sentence-header">
+        <div class="sentence-badge-wrap">
+          <span class="sentence-badge">✨ Daily Sentence</span>
+          <span id="sentence-date-label" class="sentence-date-label"></span>
+        </div>
+        <div class="sentence-header-actions">
+          <button id="btn-past-sentences" class="btn btn-ghost btn-sm" title="View past sentences" aria-label="View past sentences">
+            📜 Past Sentences
+          </button>
+        </div>
+      </div>
+
+      <div class="sentence-body">
+        <div class="sentence-quote-row">
+          <div class="sentence-quote-icon">“</div>
+          <blockquote id="sentence-en" class="sentence-en">Loading today's sentence...</blockquote>
+          <button id="btn-speak-sentence" class="icon-btn-speak" title="Listen to pronunciation" aria-label="Listen to English sentence pronunciation">
+            🔊
+          </button>
+        </div>
+
+        <div id="sentence-bn" class="sentence-bn" aria-label="Bangla translation"></div>
+        <div id="sentence-usage" class="sentence-usage" aria-label="When to use this sentence"></div>
+      </div>
+
+      <div class="sentence-footer">
+        <button id="btn-mark-read" class="btn btn-read">
+          <span class="btn-read-check">✓</span> Read
+        </button>
+        <span class="sentence-footer-hint">One polished sentence every day to master real-world English.</span>
+      </div>
+    </section>
+
+    <!-- Banner shown after today's sentence has been read -->
+    <div id="sentence-read-banner" class="sentence-read-banner" hidden>
+      <div class="read-banner-msg">
+        <span class="read-banner-icon">🎉</span>
+        <span class="read-banner-text">Great job! See you tomorrow.</span>
+      </div>
+      <button id="btn-banner-past-sentences" class="btn btn-ghost btn-sm">
+        📜 Past Sentences
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
          STOPWATCH CARD
     ════════════════════════════════════════════════ -->
     <section class="card stopwatch-card" aria-label="Stopwatch">
@@ -467,6 +515,23 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════
+       PAST SENTENCES MODAL
+  ════════════════════════════════════════════════ -->
+  <div id="past-sentences-modal" class="modal-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="past-modal-title">
+    <div class="modal-box past-modal-box">
+      <div class="modal-header">
+        <h2 id="past-modal-title" class="modal-title">📜 Past Daily Sentences</h2>
+        <button id="btn-close-past-modal" class="modal-close-btn" title="Close" aria-label="Close past sentences dialog">&times;</button>
+      </div>
+      <div id="past-sentences-list" class="past-sentences-list">
+        <!-- Dynamically rendered list of past sentences -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Built-in fallback database of daily sentences -->
+  <script src="fallback-sentences.js"></script>
   <!-- Chart.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>

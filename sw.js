@@ -3,7 +3,7 @@
  * Cache-first strategy for all app assets so it works fully offline.
  */
 
-const CACHE_NAME = 'studytrack-v2';
+const CACHE_NAME = 'studytrack-v3';
 
 // Assets to pre-cache on install
 const PRECACHE = [
@@ -11,6 +11,7 @@ const PRECACHE = [
   './index.html',
   './style.css',
   './app.js',
+  './fallback-sentences.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -38,10 +39,15 @@ self.addEventListener('activate', event => {
 
 // ── Fetch: cache-first, network fallback ──────────────────
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // Never intercept or cache serverless API requests (e.g. /api/daily-sentence)
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
   // Only handle same-origin GET requests
   if (event.request.method !== 'GET') return;
-
-  const url = new URL(event.request.url);
 
   // For CDN resources (Chart.js) use network-first with cache fallback
   if (url.hostname !== self.location.hostname) {
